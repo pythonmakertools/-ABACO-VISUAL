@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Motor - Ábaco y Conjuntos Interactivos (Definitiva v15)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap');
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #f0fdf4;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        h1, h2, .font-fun {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .pizarra-container {
+            background-color: #1e293b;
+            border: 8px solid #0f172a;
+            border-radius: 20px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 10px 25px -5px rgba(0,0,0,0.3);
+            color: #f8fafc;
+        }
+
+        .grid-pizarra {
+            display: grid;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Fredoka One', monospace;
+            font-size: 2.2rem;
+        }
+
+        .celda-pizarra {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .casilla-slot {
+            width: 52px;
+            height: 52px;
+            border: 3px dashed #64748b;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.8rem;
+        }
+
+        .casilla-slot.activa {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.2);
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
+            animation: pulse-border 1.5s infinite;
+        }
+
+        .casilla-slot.completada {
+            border-style: solid;
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.25);
+            color: #34d399;
+            cursor: default;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+
+        .num-tachado {
+            position: relative;
+            color: #94a3b8;
+            text-decoration: line-through;
+            text-decoration-color: #ef4444;
+            text-decoration-thickness: 4px;
+            font-size: 1.6rem;
+            opacity: 0.5;
+        }
+
+        .num-nuevo {
+            position: absolute;
+            top: -18px;
+            color: #f87171;
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .linea-operacion {
+            grid-column: 1 / -1;
+            height: 4px;
+            background-color: #f8fafc;
+            border-radius: 2px;
+            margin: 2px 0;
+        }
+
+        .circulo-abaco {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s ease, background-color 0.2s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+        }
+
+        .circulo-abaco:hover { transform: scale(1.15); }
+        .circulo-base { background: #3b82f6; border: 2px solid #1d4ed8; }
+        .circulo-segundo { background: #10b981; border: 2px solid #047857; }
+        .circulo-llevada { background: #f59e0b; border: 2px solid #b45309; }
+        .circulo-prestamo { background: #ec4899; border: 2px solid #be185d; }
+        
+        .circulo-contado { 
+            background: #94a3b8 !important; 
+            border-color: #475569 !important; 
+            transform: scale(0.9); 
+            opacity: 0.5; 
+        }
+
+        .circulo-tachado-resta { 
+            background: #fca5a5 !important; 
+            border-color: #ef4444 !important; 
+            opacity: 0.7;
+            cursor: not-allowed;
+            position: relative;
+        }
+        .circulo-tachado-resta::after {
+            content: '❌';
+            position: absolute;
+            font-size: 1.1rem;
+        }
+
+        .circulo-sobreviviente { 
+            background: #10b981 !important; 
+            border-color: #047857 !important; 
+            transform: scale(1.1); 
+            box-shadow: 0 0 10px rgba(16,185,129,0.8); 
+        }
+
+        .ficha-num {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #1e40af, 0 10px 15px rgba(0,0,0,0.2);
+            transition: all 0.15s ease;
+        }
+
+        .ficha-num:active, .ficha-num.seleccionada {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #1e40af, 0 4px 6px rgba(0,0,0,0.2);
+            outline: 4px solid #f59e0b;
+        }
+
+        .ficha-llevada {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 6px 0 #b45309, 0 10px 15px rgba(0,0,0,0.2);
+        }
+
+        .caja-divisoria {
+            border: 3px dashed #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 16px;
+            padding: 10px;
+            min-width: 90px;
+            min-height: 100px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-content: flex-start;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .paquete-decena {
+            border: 2px dashed #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 12px;
+            padding: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            width: 70px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .contador-flotador {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 3.5rem;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(29, 78, 216, 0.4), inset 0 4px 6px rgba(255, 255, 255, 0.3);
+            z-index: 100;
+            border: 4px solid white;
+            animation: flotar-anim 2s ease-in-out infinite alternate, pop-num 0.2s ease;
+        }
+
+        @keyframes flotar-anim {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(-8px) rotate(3deg); }
+        }
+
+        @keyframes pop-num {
+            0% { transform: scale(0.7); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center justify-start">
+
+    <div id="contador-flotador" class="contador-flotador" style="display: none;">0</div>
+
+    <header class="w-full max-w-5xl bg-white rounded-2xl p-4 shadow-md mb-6 border border-slate-200">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase">Dividendo</label>
+                    <input type="number" id="num1" value="7" class="w-24 text-center font-bold text-xl p-2 border-2 border-slate-300 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <div id="wrapper-num2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase">Divisor</label>
+                    <input type="number" id="num2" value="3" class="w-24 text-center font-bold text-xl p-2 border-2 border-slate-300 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <button onclick="iniciarOperacion()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-fun px-5 py-3 rounded-xl shadow-md active:translate-y-1 transition-all mt-4">
+                    ⚡ GENERAR
+                </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="cambiarOperacion('suma')" id="btn-suma" class="op-btn bg-slate-200 text-slate-700 font-fun px-4 py-2.5 rounded-xl transition-all">Suma (+)</button>
+                <button onclick="cambiarOperacion('resta')" id="btn-resta" class="op-btn bg-slate-200 text-slate-700 font-fun px-4 py-2.5 rounded-xl transition-all">Resta (-)</button>
+                <button onclick="cambiarOperacion('multi')" id="btn-multi" class="op-btn bg-slate-200 text-slate-700 font-fun px-4 py-2.5 rounded-xl transition-all">Multiplicación (×)</button>
+                <button onclick="cambiarOperacion('division')" id="btn-division" class="op-btn bg-blue-600 text-white font-fun px-4 py-2.5 rounded-xl shadow transition-all">División (÷)</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+        <section class="md:col-span-5 pizarra-container p-6 flex flex-col items-center justify-center min-h-[460px] relative overflow-x-auto">
+            <h2 class="text-xs font-bold text-slate-400 tracking-wider uppercase mb-4">PIZARRA ESCOLAR</h2>
+            <div id="pizarra-grid" class="grid-pizarra"></div>
+        </section>
+
+        <section class="md:col-span-7 bg-white rounded-2xl p-6 shadow-md border border-slate-200 min-h-[460px] flex flex-col justify-between">
+            <div>
+                <div id="banner-paso" class="bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-amber-900 font-bold text-center mb-4 text-base md:text-lg shadow-sm">
+                    ¡Presiona Generar para comenzar!
+                </div>
+                <div id="area-abaco" class="flex flex-col items-center justify-center gap-3 my-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-300 min-h-[220px]"></div>
+            </div>
+            <div class="border-t border-slate-100 pt-4">
+                <div class="text-xs font-bold text-slate-400 uppercase text-center mb-2" id="instruccion-fichas">Toca la ficha requerida y luego la casilla correspondiente:</div>
+                <div id="zona-fichas" class="flex flex-wrap items-center justify-center gap-3 min-h-[64px]"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        class MathMotorEngine {
+            constructor(num1, num2, operation) {
+                this.num1 = parseInt(num1);
+                this.num2 = parseInt(num2);
+                this.operation = operation;
+                this.pasos = [];
+                this.totalColumnas = 0;
+            }
+
+            generarPasos() {
+                this.pasos = [];
+                const s1 = this.num1.toString();
+                const s2 = this.num2.toString();
+
+                switch (this.operation) {
+                    case 'suma':
+                        this._procesarSuma(s1, s2);
+                        break;
+                    case 'resta':
+                        this._procesarResta(s1, s2);
+                        break;
+                    case 'multi':
+                        this._procesarMultiplicacion(s1, s2);
+                        break;
+                    case 'division':
+                        this._procesarDivision(s1, s2);
+                        break;
+                }
+                return this.pasos;
+            }
+
+            _procesarSuma(s1, s2) {
+                const maxDigits = Math.max(s1.length, s2.length);
+                this.totalColumnas = maxDigits + 1;
+                const n1P = s1.padStart(maxDigits, '0');
+                const n2P = s2.padStart(maxDigits, '0');
+
+                let llevada = 0;
+                for (let i = 0; i < maxDigits; i++) {
+                    let colIdx = i;
+                    let d1 = parseInt(n1P[maxDigits - 1 - i]);
+                    let d2 = parseInt(n2P[maxDigits - 1 - i]);
+                    let sumaTotal = d1 + d2 + llevada;
+                    let unidadResult = sumaTotal % 10;
+                    let nuevaLlevada = Math.floor(sumaTotal / 10);
+
+                    let fEsperadas = [{ targetId: `res-${colIdx}`, val: unidadResult, esLlevada: false }];
+                    if (nuevaLlevada > 0) {
+                        fEsperadas.push({ targetId: `llev-${colIdx + 1}`, val: nuevaLlevada, esLlevada: true });
+                    }
+
+                    this.pasos.push({
+                        tipo: 'SUMA_COLUMNA',
+                        col: colIdx,
+                        d1, d2, llevadaPrevia: llevada, sumaTotal,
+                        fichasEsperadas: fEsperadas,
+                        instruccion: `Suma los círculos (${d1} + ${d2}). ¡Toca cada círculo para contar!`
+                    });
+
+                    llevada = nuevaLlevada;
+                }
+
+                if (llevada > 0) {
+                    this.pasos.push({
+                        tipo: 'LLEVADA_FINAL',
+                        col: maxDigits,
+                        fichasEsperadas: [{ targetId: `res-${maxDigits}`, val: llevada, esLlevada: false }],
+                        instruccion: `Baja el paquete de llevada final (${llevada}) al resultado.`
+                    });
+                }
+            }
+
+            _procesarResta(s1, s2) {
+                let n1 = this.num1;
+                let n2 = this.num2;
+                if (n1 < n2) { [n1, n2] = [n2, n1]; }
+                
+                const str1 = n1.toString();
+                const str2 = n2.toString();
+                const maxDigits = Math.max(str1.length, str2.length);
+                this.totalColumnas = maxDigits;
+                
+                let arrTop = str1.padStart(maxDigits, '0').split('').map(Number);
+                let arrBot = str2.padStart(maxDigits, '0').split('').map(Number);
+
+                for (let i = 0; i < maxDigits; i++) {
+                    let colIdx = i;
+                    let posTop = maxDigits - 1 - i;
+                    let topDigit = arrTop[posTop];
+                    let botDigit = arrBot[posTop];
+                    let requierePrestamo = topDigit < botDigit;
+                    let topNuevo = topDigit;
+
+                    if (requierePrestamo) {
+                        topNuevo = topDigit + 10;
+                        let vecinoIdx = -1;
+                        for (let j = posTop - 1; j >= 0; j--) {
+                            if (arrTop[j] > 0) {
+                                arrTop[j] -= 1;
+                                vecinoIdx = j;
+                                break;
+                            } else {
+                                arrTop[j] = 9;
+                            }
+                        }
+
+                        this.pasos.push({
+                            tipo: 'RESTA_PRESTAMO',
+                            col: colIdx, vecinoCol: maxDigits - 1 - vecinoIdx,
+                            valorVecinoReal: arrTop[vecinoIdx] + 1,
+                            topOrig: topDigit, topNuevo: topNuevo, botDigit: botDigit,
+                            fichasEsperadas: [],
+                            instruccion: `¡No alcanza! El vecino presta un paquete completo de 10. Observa cómo se desata.`
+                        });
+                    }
+
+                    this.pasos.push({
+                        tipo: 'RESTA_COLUMNA',
+                        col: colIdx, topOrig: topDigit, topNuevo, botDigit, prestamo: requierePrestamo,
+                        fichasEsperadas: [{ targetId: `res-${colIdx}`, val: topNuevo - botDigit, esLlevada: false }],
+                        instruccion: `Tacha los ${botDigit} círculos que se van a restar. Permanecen marcados en el conjunto y no se pueden contar.`
+                    });
+                }
+            }
+
+            _procesarMultiplicacion(s1, s2) {
+                let arr1 = s1.split('').map(Number).reverse();
+                let multiplicador = parseInt(s2);
+                let llevada = 0;
+                this.totalColumnas = arr1.length + 1;
+
+                for (let i = 0; i < arr1.length; i++) {
+                    let colIdx = i;
+                    let d1 = arr1[i];
+                    let prodPuro = d1 * multiplicador;
+                    let prodTotal = prodPuro + llevada;
+                    let esUltima = (i === arr1.length - 1);
+
+                    if (esUltima) {
+                        let strTotal = prodTotal.toString();
+                        let fEsp = strTotal.split('').reverse().map((v, idx) => ({
+                            targetId: `res-${colIdx + idx}`,
+                            val: parseInt(v),
+                            esLlevada: false
+                        }));
+
+                        this.pasos.push({
+                            tipo: 'MULT_FINAL',
+                            col: colIdx, d1, multiplicador, llevadaPrevia: llevada, prodTotal,
+                            fichasEsperadas: fEsp,
+                            instruccion: `Matriz de (${d1} × ${multiplicador}) + ${llevada} = ${prodTotal}. ¡Cuenta cada punto!`
+                        });
+                    } else {
+                        let unidad = prodTotal % 10;
+                        let nuevaLlevada = Math.floor(prodTotal / 10);
+                        let fEsp = [{ targetId: `res-${colIdx}`, val: unidad, esLlevada: false }];
+                        if (nuevaLlevada > 0) fEsp.push({ targetId: `llev-${colIdx + 1}`, val: nuevaLlevada, esLlevada: true });
+
+                        this.pasos.push({
+                            tipo: 'MULT_COLUMNA',
+                            col: colIdx, d1, multiplicador, llevadaPrevia: llevada, prodTotal,
+                            fichasEsperadas: fEsp,
+                            instruccion: `Matriz (${d1} por ${multiplicador}) + llevada. ¡Cuenta todos los puntos!`
+                        });
+                        llevada = nuevaLlevada;
+                    }
+                }
+            }
+
+            _procesarDivision(s1, s2) {
+                let dividendo = parseInt(s1);
+                let divisor = parseInt(s2);
+                let cociente = Math.floor(dividendo / divisor);
+                let residuo = dividendo % divisor;
+                let productoARestar = cociente * divisor;
+
+                // Paso 1: Reparto equitativo
+                this.pasos.push({
+                    tipo: 'DIV_REPARTO',
+                    dividendo: dividendo, divisor: divisor, cociente: cociente, residuo: residuo,
+                    fichasEsperadas: [],
+                    instruccion: `¡Reparto equitativo! Arrastra 1 elemento en orden por cada canasta hasta agotar lo posible.`
+                });
+
+                // Paso 2: Cociente arriba sobre el dividendo
+                this.pasos.push({
+                    tipo: 'DIV_COCIENTE',
+                    dividendo: dividendo, divisor: divisor, cociente: cociente, residuo: residuo,
+                    fichasEsperadas: [{ targetId: 'cociente-galera', val: cociente, esLlevada: false }],
+                    instruccion: `¿Cuántos le tocaron a cada canasta? Coloca el cociente arriba en la galera.`
+                });
+
+                // Paso 3: Producto a restar debajo del dividendo (divisor x cociente)
+                this.pasos.push({
+                    tipo: 'DIV_PRODUCTO',
+                    dividendo: dividendo, divisor: divisor, producto: productoARestar, residuo: residuo,
+                    fichasEsperadas: [{ targetId: 'producto-galera', val: productoARestar, esLlevada: false }],
+                    instruccion: `¿Cuánto repartimos en total? (${divisor} × ${cociente}). Coloca el producto debajo del dividendo para restar.`
+                });
+
+                // Paso 4: Residuo abajo en la galera
+                this.pasos.push({
+                    tipo: 'DIV_RESIDUO',
+                    dividendo: dividendo, divisor: divisor, producto: productoARestar, residuo: residuo,
+                    fichasEsperadas: [{ targetId: 'residuo-galera', val: residuo, esLlevada: false }],
+                    instruccion: `Haz la resta (${dividendo} - ${productoARestar}). ¿Cuánto sobró? Coloca el residuo abajo.`
+                });
+            }
+        }
+
+        const estado = {
+            num1: 7, num2: 3, operacion: 'division',
+            pasos: [], pasoActual: 0, circulosContados: 0, circulosTotalesPaso: 0,
+            fichaSeleccionada: null, totalColumnas: 1, elementosRepartidos: 0,
+            turnoCanastaActual: 0, repartoCompletado: false
+        };
+
+        window.onload = () => cambiarOperacion('division');
+
+        function cambiarOperacion(op) {
+            estado.operacion = op;
+            document.querySelectorAll('.op-btn').forEach(btn => btn.className = "op-btn bg-slate-200 text-slate-700 font-fun px-4 py-2.5 rounded-xl transition-all");
+            document.getElementById(`btn-${op}`).className = "op-btn bg-blue-600 text-white font-fun px-4 py-2.5 rounded-xl shadow transition-all";
+            
+            if (op === 'suma') { num1.value = 243; num2.value = 158; }
+            if (op === 'resta') { num1.value = 43; num2.value = 18; }
+            if (op === 'multi') { num1.value = 24; num2.value = 3; }
+            if (op === 'division') { num1.value = 7; num2.value = 3; }
+            iniciarOperacion();
+        }
+
+        function iniciarOperacion() {
+            let val1 = parseInt(document.getElementById('num1').value) || 1;
+            let val2 = parseInt(document.getElementById('num2').value) || 1;
+            
+            estado.num1 = val1; estado.num2 = val2;
+            estado.pasoActual = 0; estado.fichaSeleccionada = null;
+
+            const motor = new MathMotorEngine(val1, val2, estado.operacion);
+            estado.pasos = motor.generarPasos();
+            estado.totalColumnas = motor.totalColumnas;
+
+            dibujarPizarra();
+            cargarPasoActual();
+        }
+
+        function dibujarPizarra() {
+            const grid = document.getElementById('pizarra-grid');
+            grid.innerHTML = '';
+            const s1 = estado.num1.toString();
+            const s2 = estado.num2.toString();
+
+            if (estado.operacion !== 'division') {
+                const N = estado.totalColumnas;
+                grid.style.gridTemplateColumns = `50px repeat(${N}, 60px)`;
+
+                grid.appendChild(crearCeldaVacia(50));
+                for (let i = N - 1; i >= 0; i--) {
+                    let celda = crearCeldaVacia(60);
+                    celda.innerHTML = `<div class="casilla-slot" id="llev-${i}"></div>`;
+                    grid.appendChild(celda);
+                }
+
+                grid.appendChild(crearCeldaVacia(50));
+                for (let i = N - 1; i >= 0; i--) {
+                    let celda = crearCeldaVacia(60);
+                    celda.id = `top-col-${i}`;
+                    let posChar = s1.length - 1 - i;
+                    if (posChar >= 0 && posChar < s1.length) celda.innerText = s1[posChar];
+                    grid.appendChild(celda);
+                }
+
+                let celdaOp = crearCeldaVacia(50);
+                celdaOp.innerHTML = `<span class="text-amber-400 font-bold">${estado.operacion === 'suma' ? '+' : (estado.operacion === 'resta' ? '-' : '×')}</span>`;
+                grid.appendChild(celdaOp);
+                for (let i = N - 1; i >= 0; i--) {
+                    let celda = crearCeldaVacia(60);
+                    let posChar = s2.length - 1 - i;
+                    if (posChar >= 0 && posChar < s2.length) celda.innerText = s2[posChar];
+                    grid.appendChild(celda);
+                }
+
+                let linea = document.createElement('div');
+                linea.className = 'linea-operacion';
+                grid.appendChild(linea);
+
+                grid.appendChild(crearCeldaVacia(50));
+                for (let i = N - 1; i >= 0; i--) {
+                    let celda = crearCeldaVacia(60);
+                    celda.innerHTML = `<div class="casilla-slot" id="res-${i}"></div>`;
+                    grid.appendChild(celda);
+                }
+            } else {
+                grid.style.gridTemplateColumns = `70px 10px 70px`;
+                grid.style.gap = '2px';
+                
+                let wrapper = document.createElement('div');
+                wrapper.style.gridColumn = '1 / -1';
+                wrapper.className = 'flex flex-col items-center justify-center p-2';
+
+                wrapper.innerHTML = `
+                    <div class="flex flex-col items-center font-bold text-3xl text-white">
+                        <div class="flex items-center mb-1">
+                            <div class="w-[70px]"></div>
+                            <div class="w-[10px]"></div>
+                            <div class="w-[70px] flex justify-center">
+                                <div class="casilla-slot" id="cociente-galera"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <div class="w-[70px] px-3 py-2 bg-blue-600 rounded-l-xl border-2 border-blue-500 text-center">${estado.num2}</div>
+                            <div class="border-t-4 border-l-4 border-white px-6 py-2 rounded-tr-xl bg-slate-800 w-[70px] text-center">${estado.num1}</div>
+                        </div>
+
+                        <div class="flex items-center mt-1">
+                            <div class="w-[70px]"></div>
+                            <div class="w-[10px] text-lg text-amber-400 font-bold">-</div>
+                            <div class="w-[70px] flex justify-center">
+                                <div class="casilla-slot !w-12 !h-12 text-sm" id="producto-galera" title="Producto a restar"></div>
+                            </div>
+                        </div>
+
+                        <div class="w-[150px] h-[3px] bg-white my-1"></div>
+
+                        <div class="flex items-center">
+                            <div class="w-[70px]"></div>
+                            <div class="w-[10px]"></div>
+                            <div class="w-[70px] flex justify-center">
+                                <div class="casilla-slot !w-12 !h-12 text-sm" id="residuo-galera" title="Residuo"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(wrapper);
+            }
+
+            document.querySelectorAll('.casilla-slot').forEach(slot => slot.onclick = () => intentarColocarFichaEnSlot(slot));
+        }
+
+        function crearCeldaVacia(w = 60) {
+            const div = document.createElement('div');
+            div.className = 'celda-pizarra';
+            div.style.width = `${w}px`;
+            return div;
+        }
+
+        function cargarPasoActual() {
+            if (estado.pasoActual >= estado.pasos.length) {
+                document.getElementById('banner-paso').className = "bg-emerald-100 border-2 border-emerald-300 text-emerald-900 rounded-xl p-3 font-bold text-center text-lg shadow-sm";
+                document.getElementById('banner-paso').innerText = "🎉 ¡Felicidades! Has resuelto la división en la pizarra correctamente.";
+                document.getElementById('zona-fichas').innerHTML = '';
+                document.getElementById('instruccion-fichas').innerText = "¡Operación completada con éxito!";
+                ocultarFlotador();
+                return;
+            }
+
+            const paso = estado.pasos[estado.pasoActual];
+            document.getElementById('banner-paso').innerText = `Paso ${estado.pasoActual + 1}: ${paso.instruccion}`;
+
+            document.querySelectorAll('.casilla-slot').forEach(s => {
+                if(!s.classList.contains('completada')) s.classList.remove('activa');
+            });
+            paso.fichasEsperadas.forEach(f => {
+                let slot = document.getElementById(f.targetId);
+                if (slot && !slot.classList.contains('completada')) slot.classList.add('activa');
+            });
+
+            renderizarAbaco(paso);
+            generarFichasRespuesta(paso);
+            verificarConteoCompletado();
+        }
+
+        function renderizarAbaco(paso) {
+            const area = document.getElementById('area-abaco');
+            estado.circulosContados = 0;
+            ocultarFlotador();
+
+            if (paso.tipo === 'SUMA_COLUMNA') {
+                area.innerHTML = '';
+                estado.circulosTotalesPaso = paso.sumaTotal;
+                mostrarFlotador(0);
+
+                let cont = document.createElement('div'); 
+                cont.className = "flex flex-col items-center gap-3 w-full";
+
+                if (paso.llevadaPrevia > 0) {
+                    let rowLlevada = document.createElement('div');
+                    rowLlevada.className = "flex items-center gap-2 bg-amber-100 p-2 rounded-xl border border-amber-300";
+                    rowLlevada.innerHTML = `<span class="text-xs font-bold text-amber-800">+${paso.llevadaPrevia} Paquete Llevado:</span>`;
+                    for (let i = 0; i < paso.llevadaPrevia; i++) rowLlevada.appendChild(crearCirculoSuma('llevada'));
+                    cont.appendChild(rowLlevada);
+                }
+
+                let row1 = document.createElement('div'); 
+                row1.className = "flex flex-wrap justify-center items-center gap-2";
+                row1.innerHTML = `<span class="text-xs font-bold text-slate-400 mr-1">${paso.d1}:</span>`;
+                for (let i = 0; i < paso.d1; i++) row1.appendChild(crearCirculoSuma('base'));
+                cont.appendChild(row1);
+
+                let row2 = document.createElement('div'); 
+                row2.className = "flex flex-wrap justify-center items-center gap-2";
+                row2.innerHTML = `<span class="text-xs font-bold text-slate-400 mr-1">+ ${paso.d2}:</span>`;
+                for (let i = 0; i < paso.d2; i++) row2.appendChild(crearCirculoSuma('segundo'));
+                cont.appendChild(row2);
+
+                area.appendChild(cont);
+            }
+            else if (paso.tipo === 'RESTA_PRESTAMO') {
+                area.innerHTML = '';
+                estado.circulosTotalesPaso = 0;
+                let box = document.createElement('div');
+                box.className = "p-4 bg-pink-50 border-2 border-pink-200 rounded-xl text-center flex flex-col items-center gap-3";
+                
+                let montonesHTML = '';
+                for (let m = 0; m < paso.valorVecinoReal; m++) {
+                    montonesHTML += `
+                        <div class="paquete-decena">
+                            <span class="text-[10px] font-bold text-amber-700 w-full text-center">Paquete 10</span>
+                            ${Array(10).fill('<div class="w-3 h-3 rounded-full bg-amber-500 border border-amber-700"></div>').join('')}
+                        </div>
+                    `;
+                }
+
+                box.innerHTML = `
+                    <div class="text-pink-800 font-bold text-sm">💡 Desatando el paquete con valor posicional real</div>
+                    <div class="text-xs text-pink-700">Tomamos 1 paquete completo de 10 del vecino y lo desatamos para unirlo al ${paso.topOrig}.</div>
+                    <div class="flex flex-wrap justify-center gap-2 my-2">${montonesHTML}</div>
+                    <button id="btn-entendido" class="bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs py-2 px-5 rounded-lg shadow">
+                        ¡Entendido! Ver conjunto
+                    </button>
+                `;
+                area.appendChild(box);
+
+                document.getElementById('btn-entendido').onclick = () => {
+                    let vecinoCol = paso.vecinoCol;
+                    let elVecino = document.getElementById(`top-col-${vecinoCol}`);
+                    if (elVecino && !elVecino.classList.contains('modificado')) {
+                        let valOrig = parseInt(elVecino.innerText) || 0;
+                        let valNuevo = Math.max(0, valOrig - 1);
+                        elVecino.innerHTML = `<span class="num-tachado">${valOrig}</span><span class="num-nuevo">${valNuevo}</span>`;
+                        elVecino.classList.add('modificado');
+                    }
+
+                    let elActual = document.getElementById(`top-col-${paso.col}`);
+                    if (elActual && !elActual.classList.contains('modificado')) {
+                        elActual.innerHTML = `<span class="num-tachado">${paso.topOrig}</span><span class="num-nuevo">${paso.topNuevo}</span>`;
+                        elActual.classList.add('modificado');
+                    }
+
+                    estado.pasoActual++;
+                    cargarPasoActual();
+                };
+            }
+            else if (paso.tipo === 'RESTA_COLUMNA') {
+                area.innerHTML = '';
+                estado.faseResta = 'tachando';
+                estado.circulosTotalesPaso = paso.botDigit;
+                let cont = document.createElement('div'); 
+                cont.className = "flex flex-col items-center gap-3 w-full";
+
+                let row = document.createElement('div'); 
+                row.className = "flex flex-wrap justify-center gap-2 max-w-md my-2";
+
+                for (let i = 0; i < paso.topNuevo; i++) {
+                    let tipo = (paso.prestamo && i >= paso.topOrig) ? 'prestamo' : 'base';
+                    row.appendChild(crearCirculoRestaTachar(tipo, paso.botDigit));
+                }
+                cont.appendChild(row);
+                area.appendChild(cont);
+            }
+            else if (paso.tipo === 'RESTA_CONTAR_SOBREVIVIENTES') {
+                area.innerHTML = '';
+                estado.faseResta = 'contando_sobrevivientes';
+                let sobrevivientes = paso.sobrevivientes;
+                estado.circulosTotalesPaso = sobrevivientes;
+                mostrarFlotador(0);
+
+                let cont = document.createElement('div'); 
+                cont.className = "flex flex-col items-center gap-3 w-full";
+
+                let avisoInfo = document.createElement('div');
+                avisoInfo.className = "text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200 mb-1";
+                avisoInfo.innerText = "Los círculos tachados (❌) permanecen en el conjunto pero están inhabilitados. Cuenta solo los sobrevivientes verdes:";
+                cont.appendChild(avisoInfo);
+
+                let row = document.createElement('div'); 
+                row.className = "flex flex-wrap justify-center gap-2 max-w-md my-2";
+
+                for (let t = 0; t < paso.totalTachados; t++) {
+                    let divTachado = document.createElement('div');
+                    divTachado.className = "circulo-abaco circulo-tachado-resta";
+                    row.appendChild(divTachado);
+                }
+
+                for (let s = 0; s < sobrevivientes; s++) {
+                    row.appendChild(crearCirculoSobreviviente());
+                }
+
+                cont.appendChild(row);
+                area.appendChild(cont);
+            }
+            else if (paso.tipo === 'MULT_COLUMNA' || paso.tipo === 'MULT_FINAL') {
+                area.innerHTML = '';
+                estado.circulosTotalesPaso = paso.prodTotal;
+                mostrarFlotador(0);
+
+                let cont = document.createElement('div'); 
+                cont.className = "flex flex-col items-center gap-2 w-full";
+
+                let matrizCont = document.createElement('div');
+                matrizCont.className = "flex flex-col items-center gap-2 my-2";
+
+                for (let r = 0; r < paso.multiplicador; r++) {
+                    let fila = document.createElement('div'); 
+                    fila.className = "flex justify-center items-center gap-2";
+                    for (let c = 0; c < paso.d1; c++) fila.appendChild(crearCirculoSuma('base'));
+                    matrizCont.appendChild(fila);
+                }
+
+                if (paso.llevadaPrevia > 0) {
+                    let filaLlevada = document.createElement('div'); 
+                    filaLlevada.className = "flex items-center gap-2 bg-amber-100 p-2 rounded-xl border border-amber-300 mt-2";
+                    filaLlevada.innerHTML = `<span class="text-xs font-bold text-amber-800">+${paso.llevadaPrevia} Paquete Llevado:</span>`;
+                    for (let c = 0; c < paso.llevadaPrevia; c++) filaLlevada.appendChild(crearCirculoSuma('llevada'));
+                    matrizCont.appendChild(filaLlevada);
+                }
+                cont.appendChild(matrizCont);
+                area.appendChild(cont);
+            }
+            else if (paso.tipo === 'DIV_REPARTO') {
+                area.innerHTML = '';
+                estado.elementosRepartidos = 0;
+                estado.circulosTotalesPaso = paso.dividendo;
+                estado.turnoCanastaActual = 0;
+                estado.repartoCompletado = false;
+
+                let maximoRepartible = paso.dividendo - paso.residuo;
+
+                let cont = document.createElement('div'); 
+                cont.className = "flex flex-col items-center gap-3 w-full";
+
+                let poolInfo = document.createElement('div');
+                poolInfo.id = "pool-info";
+                poolInfo.className = "text-sm font-bold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-200 shadow-sm";
+                poolInfo.innerText = `Turno: Arrastra al Canasta ${estado.turnoCanastaActual + 1} (Reserva: ${paso.dividendo - estado.elementosRepartidos})`;
+                cont.appendChild(poolInfo);
+
+                let zonaReserva = document.createElement('div');
+                zonaReserva.id = "zona-reserva";
+                zonaReserva.className = "flex flex-wrap gap-2 justify-center p-3 bg-white rounded-xl border border-slate-200 min-h-[60px] w-full";
+                
+                for (let k = 0; k < paso.dividendo; k++) {
+                    let circDrag = document.createElement('div');
+                    circDrag.className = "circulo-abaco circulo-base";
+                    circDrag.draggable = true;
+                    circDrag.id = `drag-circulo-${k}`;
+                    
+                    circDrag.ondragstart = (e) => {
+                        e.dataTransfer.setData('text/plain', circDrag.id);
+                    };
+                    zonaReserva.appendChild(circDrag);
+                }
+                cont.appendChild(zonaReserva);
+
+                let cajasContainer = document.createElement('div'); 
+                cajasContainer.className = "flex justify-center gap-3 flex-wrap w-full mt-2";
+
+                for (let i = 0; i < paso.divisor; i++) {
+                    let caja = document.createElement('div'); 
+                    caja.className = `caja-divisoria ${i === 0 ? 'turno-activo' : ''}`;
+                    caja.id = `caja-${i}`;
+                    caja.innerHTML = `<div class="w-full text-center text-xs font-bold text-blue-500 mb-1">Canasta ${i+1}</div>`;
+                    
+                    caja.ondragover = (e) => { e.preventDefault(); caja.classList.add('drag-over'); };
+                    caja.ondragleave = () => { caja.classList.remove('drag-over'); };
+                    caja.ondrop = (e) => {
+                        e.preventDefault();
+                        caja.classList.remove('drag-over');
+
+                        if (estado.repartoCompletado) return;
+
+                        if (i !== estado.turnoCanastaActual) {
+                            alert(`¡Es el turno del Canasta ${estado.turnoCanastaActual + 1} para mantener el reparto equitativo!`);
+                            return;
+                        }
+
+                        if (estado.elementosRepartidos < maximoRepartible) {
+                            estado.elementosRepartidos++;
+                            let mini = document.createElement('div');
+                            mini.className = "circulo-abaco circulo-base !w-6 !h-6";
+                            caja.appendChild(mini);
+                            
+                            let reserva = document.getElementById('zona-reserva');
+                            if (reserva && reserva.lastChild) reserva.lastChild.remove();
+
+                            document.querySelectorAll('.caja-divisoria').forEach((c) => {
+                                c.classList.remove('turno-activo');
+                            });
+
+                            if (estado.elementosRepartidos === maximoRepartible) {
+                                estado.repartoCompletado = true;
+                                if (paso.residuo > 0) {
+                                    mostrarCajaSobrantesVisual(paso.residuo);
+                                } else {
+                                    setTimeout(() => {
+                                        estado.pasoActual++;
+                                        cargarPasoActual();
+                                    }, 800);
+                                }
+                            } else {
+                                estado.turnoCanastaActual = (estado.turnoCanastaActual + 1) % paso.divisor;
+                                let siguienteCaja = document.getElementById(`caja-${estado.turnoCanastaActual}`);
+                                if (siguienteCaja) siguienteCaja.classList.add('turno-activo');
+                                document.getElementById('pool-info').innerText = `Turno: Arrastra al Canasta ${estado.turnoCanastaActual + 1} (Reserva: ${paso.dividendo - estado.elementosRepartidos})`;
+                            }
+                        }
+                    };
+                    cajasContainer.appendChild(caja);
+                }
+                cont.appendChild(cajasContainer);
+                area.appendChild(cont);
+            }
+            else if (paso.tipo === 'DIV_COCIENTE' || paso.tipo === 'DIV_PRODUCTO' || paso.tipo === 'DIV_RESIDUO') {
+                // CORRECCIÓN CLAVE: Restablecemos los círculos a 0 para que no bloqueen las fichas de respuesta
+                estado.circulosTotalesPaso = 0;
+
+                let cocienteVal = Math.floor(paso.dividendo / paso.divisor);
+                let sobrantesVal = paso.residuo;
+
+                let canastosHTML = '';
+                for (let i = 0; i < paso.divisor; i++) {
+                    let circulosCanasta = '';
+                    for (let c = 0; c < cocienteVal; c++) {
+                        circulosCanasta += `<div class="circulo-abaco circulo-base !w-6 !h-6"></div>`;
+                    }
+                    canastosHTML += `
+                        <div class="border-2 border-blue-300 bg-blue-50/50 rounded-xl p-3 min-w-[90px] flex flex-col items-center gap-1 shadow-sm">
+                            <span class="text-xs font-bold text-blue-600">Canasta ${i+1}</span>
+                            <div class="flex flex-wrap gap-1 justify-center">${circulosCanasta}</div>
+                        </div>
+                    `;
+                }
+
+                let sobrantesHTML = '';
+                for (let s = 0; s < sobrantesVal; s++) {
+                    sobrantesHTML += `<div class="circulo-abaco circulo-prestamo !w-7 !h-7"></div>`;
+                }
+
+                area.innerHTML = `
+                    <div class="w-full flex flex-col gap-3">
+                        <div class="text-xs font-bold text-slate-500 text-center">📌 Estado visual permanente del reparto:</div>
+                        <div class="flex justify-center gap-3 flex-wrap">${canastosHTML}</div>
+                        ${sobrantesVal > 0 ? `
+                            <div class="p-3 bg-amber-50 border-2 border-amber-300 rounded-xl flex flex-col items-center gap-2 shadow-inner">
+                                <span class="text-xs font-bold text-amber-800">🛑 Caja de Sobrantes (Residuo):</span>
+                                <div class="flex gap-2 justify-center">${sobrantesHTML}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            else if (paso.tipo === 'LLEVADA_FINAL') {
+                estado.circulosTotalesPaso = 0;
+                area.innerHTML = `<div class="text-emerald-600 font-bold">${paso.instruccion}</div>`;
+            }
+        }
+
+        function mostrarFlotador(valorInicial) {
+            let flotador = document.getElementById('contador-flotador');
+            if (flotador) {
+                flotador.innerText = valorInicial;
+                flotador.style.display = 'flex';
+            }
+        }
+
+        function ocultarFlotador() {
+            let flotador = document.getElementById('contador-flotador');
+            if (flotador) flotador.style.display = 'none';
+        }
+
+        function actualizarFlotador(nuevoValor) {
+            let flotador = document.getElementById('contador-flotador');
+            if (flotador) {
+                flotador.innerText = nuevoValor;
+                flotador.style.animation = 'none';
+                void flotador.offsetWidth;
+                flotador.style.animation = 'flotar-anim 2s ease-in-out infinite alternate, pop-num 0.2s ease';
+            }
+        }
+
+        function crearCirculoSuma(estilo) {
+            const div = document.createElement('div');
+            div.className = `circulo-abaco circulo-${estilo}`;
+            div.onclick = () => {
+                if (!div.classList.contains('circulo-contado')) {
+                    div.classList.add('circulo-contado');
+                    estado.circulosContados++;
+                    actualizarFlotador(estado.circulosContados);
+                    verificarConteoCompletado();
+                }
+            };
+            return div;
+        }
+
+        function crearCirculoRestaTachar(estilo, totalATachar) {
+            const div = document.createElement('div');
+            div.className = `circulo-abaco circulo-${estilo}`;
+            div.onclick = () => {
+                if (estado.faseResta === 'tachando' && !div.classList.contains('circulo-tachado-resta')) {
+                    div.classList.add('circulo-tachado-resta');
+                    estado.circulosContados++;
+
+                    if (estado.circulosContados === totalATachar) {
+                        setTimeout(() => {
+                            const pasoActualObj = estado.pasos[estado.pasoActual];
+                            let sobrevivientes = pasoActualObj.topNuevo - totalATachar;
+                            
+                            estado.pasos[estado.pasoActual] = {
+                                tipo: 'RESTA_CONTAR_SOBREVIVIENTES',
+                                col: pasoActualObj.col,
+                                totalTachados: totalATachar,
+                                sobrevivientes: sobrevivientes,
+                                fichasEsperadas: pasoActualObj.fichasEsperadas,
+                                instruccion: `¡Muy bien! Los ${totalATachar} círculos tachados permanecen en el conjunto. Ahora cuenta únicamente los sobrevivientes verdes:`
+                            };
+                            cargarPasoActual();
+                        }, 600);
+                    }
+                }
+            };
+            return div;
+        }
+
+        function crearCirculoSobreviviente() {
+            const div = document.createElement('div');
+            div.className = `circulo-abaco circulo-prestamo`;
+            div.onclick = () => {
+                if (!div.classList.contains('circulo-sobreviviente')) {
+                    div.classList.add('circulo-sobreviviente');
+                    estado.circulosContados++;
+                    actualizarFlotador(estado.circulosContados);
+                    verificarConteoCompletado();
+                }
+            };
+            return div;
+        }
+
+        function mostrarCajaSobrantesVisual(sobrantes) {
+            const area = document.getElementById('area-abaco');
+            let cajaSobrantes = document.createElement('div');
+            cajaSobrantes.className = "mt-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-xl flex flex-col items-center gap-2 w-full shadow-inner";
+            
+            let circulosSobrantesHTML = '';
+            for (let s = 0; s < sobrantes; s++) {
+                circulosSobrantesHTML += `<div class="circulo-abaco circulo-prestamo !w-7 !h-7"></div>`;
+            }
+
+            cajaSobrantes.innerHTML = `
+                <div class="text-xs font-bold text-amber-800">🛑 Estos ${sobrantes} elementos sobrantes van a la <b>Caja de Sobrantes (Residuo)</b>:</div>
+                <div class="flex gap-2 justify-center">${circulosSobrantesHTML}</div>
+            `;
+            area.appendChild(cajaSobrantes);
+
+            setTimeout(() => {
+                estado.pasoActual++;
+                cargarPasoActual();
+            }, 1400);
+        }
+
+        function verificarConteoCompletado() {
+            const paso = estado.pasos[estado.pasoActual];
+            if (!paso || estado.circulosTotalesPaso === 0 || estado.circulosContados >= estado.circulosTotalesPaso) {
+                ocultarFlotador();
+                document.querySelectorAll('.ficha-num').forEach(f => {
+                    f.style.opacity = '1';
+                    f.style.pointerEvents = 'auto';
+                });
+                document.getElementById('instruccion-fichas').innerText = "¡Paso completado! Toca la ficha correcta y colócala en la casilla resaltada:";
+            }
+        }
+
+        function generarFichasRespuesta(paso) {
+            const zona = document.getElementById('zona-fichas');
+            zona.innerHTML = '';
+
+            paso.fichasEsperadas.forEach(f => {
+                let ficha = document.createElement('div');
+                ficha.className = `ficha-num ${f.esLlevada ? 'ficha-llevada' : ''}`;
+                ficha.innerText = f.val;
+                ficha.dataset.val = f.val;
+                ficha.dataset.targetId = f.targetId;
+
+                if (estado.circulosTotalesPaso > 0 && estado.circulosContados < estado.circulosTotalesPaso) {
+                    ficha.style.opacity = '0.35';
+                    ficha.style.pointerEvents = 'none';
+                }
+
+                ficha.onclick = () => {
+                    document.querySelectorAll('.ficha-num').forEach(x => x.classList.remove('seleccionada'));
+                    ficha.classList.add('seleccionada');
+                    estado.fichaSeleccionada = { elem: ficha, info: f };
+                };
+                zona.appendChild(ficha);
+            });
+        }
+
+        function intentarColocarFichaEnSlot(slot) {
+            if (!estado.fichaSeleccionada) return;
+            const { elem, info } = estado.fichaSeleccionada;
+
+            if (slot.id === info.targetId) {
+                slot.innerText = info.val;
+                slot.className = "casilla-slot completada";
+                elem.remove();
+                estado.fichaSeleccionada = null;
+
+                const paso = estado.pasoActual;
+                let faltan = estado.pasos[paso].fichasEsperadas.filter(f => {
+                    let s = document.getElementById(f.targetId);
+                    return !s || !s.classList.contains('completada');
+                });
+
+                if (faltan.length === 0) {
+                    setTimeout(() => {
+                        estado.pasoActual++;
+                        cargarPasoActual();
+                    }, 500);
+                }
+            } else {
+                slot.style.borderColor = '#ef4444';
+                setTimeout(() => { slot.style.borderColor = ''; }, 500);
+            }
+        }
+    </script>
+</body>
+</html>
